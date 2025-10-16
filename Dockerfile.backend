@@ -7,18 +7,25 @@ WORKDIR /app
 
 # Paquetes necesarios para compilar dependencias nativas (@swc/core, better-sqlite3, etc.)
 RUN apt-get update \
-	&& apt-get install -y --no-install-recommends \
-		 python3 \
-		 make \
-		 g++ \
-		 ca-certificates \
-	&& rm -rf /var/lib/apt/lists/*
+  && apt-get install -y --no-install-recommends \
+	  python3 \
+	  make \
+	  g++ \
+	  build-essential \
+	  libc6-dev \
+	  libstdc++6 \
+	  pkg-config \
+	  git \
+	  ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
 
 # Copiar manifests primero para aprovechar la cache
 COPY package*.json ./
 
 # Instalar TODAS las dependencias (incluye dev) de forma reproducible
 ENV NODE_ENV=development
+# Fuerza la compilación desde fuente para cualquier módulo nativo
+ENV npm_config_build_from_source=true
 RUN npm ci --legacy-peer-deps
 
 # Copiar el resto del proyecto
@@ -43,6 +50,13 @@ WORKDIR /app
 
 # Mantener sólo lo necesario para ejecutar (copiamos node_modules ya compilados)
 ENV NODE_ENV=production
+
+# Asegurar runtime libs requeridas por binarios nativos
+RUN apt-get update \
+	&& apt-get install -y --no-install-recommends \
+		 libstdc++6 \
+		 ca-certificates \
+	&& rm -rf /var/lib/apt/lists/*
 
 # Copiamos node_modules ya compilados y el código construido
 COPY --from=builder /app/node_modules ./node_modules
