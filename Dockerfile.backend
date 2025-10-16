@@ -1,38 +1,62 @@
+############################
 # Dockerfile para Backend Strapi
-FROM node:18-alpine as builder
+############################
 
+# 1) Etapa de build (Debian; evita problemas de musl/@swc)
+FROM node:20-bookworm-slim AS builder
+
+ENV DEBIAN_FRONTEND=noninteractive
 WORKDIR /app
 
-# Copy package files
+# Dependencias de compilación para módulos nativos (better-sqlite3/sharp, etc.)
+RUN apt-get update \
+	&& apt-get install -y --no-install-recommends \
+		build-essential \
+		python3 \
+		ca-certificates \
+		git \
+	&& rm -rf /var/lib/apt/lists/*
+
+# Copiar manifiestos primero (mejor cache)
 COPY package*.json ./
 
-# Install ALL dependencies (including devDependencies for build)
+# Instalar TODAS las dependencias (incluye dev para compilar el admin)
 ENV NODE_ENV=development
 RUN npm install --legacy-peer-deps
 
-# Copy source code
+# Copiar el resto del código
 COPY . .
 
-# Create .env from .env.production if it doesn't exist
+# Si existe .env.production y no hay .env, úsalo durante el build
 RUN if [ -f .env.production ] && [ ! -f .env ]; then cp .env.production .env; fi
 
-# Build admin panel with all dependencies available
+# Compilar (admin + server)
 ENV NODE_ENV=production
 RUN npm run build
 
-# Production stage
-FROM node:18-alpine
+# Dejar node_modules sólo con dependencias de producción para runtime
+RUN npm prune --omit=dev
 
+
+# 2) Etapa de runtime (ligera)
+FROM node:20-bookworm-slim AS runtime
+
+ENV DEBIAN_FRONTEND=noninteractive
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
+# Certificados
+RUN apt-get update \
+	&& apt-get install -y --no-install-recommends ca-certificates \
+	&& rm -rf /var/lib/apt/lists/*
 
-# Install only production dependencies
+# Variables
 ENV NODE_ENV=production
-RUN npm install --production --legacy-peer-deps
 
-# Copy built application from builder
+# Copiar package.json y node_modules ya pruned desde el builder
+COPY package*.json ./
+COPY --from=builder /app/node_modules ./node_modules
+
+# Copiar artefactos y código necesario
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/build ./build
 COPY --from=builder /app/public ./public
@@ -40,13 +64,13 @@ COPY --from=builder /app/config ./config
 COPY --from=builder /app/database ./database
 COPY --from=builder /app/src ./src
 
-# Copy environment files
-COPY --from=builder /app/.env* ./ 
+# Copiar archivos de entorno si existen
+COPY --from=builder /app/.env* ./
 
-# Create .env from .env.production if needed
+# Crear .env desde .env.production si no existe
 RUN if [ -f .env.production ] && [ ! -f .env ]; then cp .env.production .env; fi
 
-# Create uploads directory
+# Asegurar carpeta de uploads
 RUN mkdir -p /app/public/uploads
 
 EXPOSE 1337

@@ -1,8 +1,11 @@
 node_modules
-npm-debug.log
+public/uploads
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 .git
 .gitignore
-.env.example
+.dockerignore
 .cache
 dist
 build
@@ -13,3 +16,8 @@ build
 .idea
 coverage
 .DS_Store
+.docker
+Dockerfile*
+.env
+.env.*
+!.env.example
