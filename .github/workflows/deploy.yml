@@ -20,7 +20,7 @@ jobs:
           username: ${{ secrets.VPS_USERNAME }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
-            cd /opt/gb-constructora-backend
+            cd ~/gb-constructora-backend
             git pull origin main
             docker-compose up -d --build
             docker system prune -af
