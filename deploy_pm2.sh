@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -e -o pipefail
 
 echo "🚀 Strapi PM2 deploy (sin Docker) - amd64"
 
@@ -37,15 +37,12 @@ esac
 if ! command -v nvm >/dev/null 2>&1; then
   echo "📦 Instalando nvm..."
   curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
-  # shellcheck source=/dev/null
-  source "$HOME/.bashrc" || true
-  source "$HOME/.profile" || true
 fi
 
-if ! command -v nvm >/dev/null 2>&1; then
-  # shellcheck source=/dev/null
-  [ -s "$HOME/.nvm/nvm.sh" ] && . "$HOME/.nvm/nvm.sh" || true
-fi
+# Cargar nvm en esta sesión sin sourcear .bashrc (evita error de PS1)
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+[ -s "$NVM_DIR/bash_completion" ] && . "$NVM_DIR/bash_completion"
 
 echo "🔢 Instalando Node 20..."
 nvm install 20 >/dev/null
