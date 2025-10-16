@@ -18,22 +18,28 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.backend
+      args:
+        NODE_ENV: production
     container_name: gb-strapi
     environment:
+      HOST: 0.0.0.0
+      PORT: 1337
       DATABASE_CLIENT: postgres
       DATABASE_HOST: postgres
       DATABASE_PORT: 5432
       DATABASE_NAME: strapi
       DATABASE_USERNAME: strapi
-      DATABASE_PASSWORD: ${DB_PASSWORD}
+      DATABASE_PASSWORD: ${DB_PASSWORD:-strapi}
       DATABASE_SSL: false
       APP_KEYS: ${APP_KEYS}
       API_TOKEN_SALT: ${API_TOKEN_SALT}
       ADMIN_JWT_SECRET: ${ADMIN_JWT_SECRET}
+      TRANSFER_TOKEN_SALT: ${TRANSFER_TOKEN_SALT}
       JWT_SECRET: ${JWT_SECRET}
+      CLIENT_URL: ${CLIENT_URL}
       NODE_ENV: production
     ports:
-      - "5137:1337"
+      - "1337:1337"
     depends_on:
       - postgres
     networks:

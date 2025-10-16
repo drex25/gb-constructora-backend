@@ -1,5 +1,5 @@
 # Dockerfile para Backend Strapi
-FROM node:18-bullseye-slim
+FROM node:18-bullseye-slim as builder
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -18,7 +18,9 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install ALL dependencies (including devDependencies for build)
-RUN npm ci
+# Set NODE_ENV to development during install to ensure all deps are installed
+ENV NODE_ENV=development
+RUN npm ci --legacy-peer-deps
 
 # Copy source code
 COPY . .
@@ -27,8 +29,34 @@ COPY . .
 ENV NODE_ENV=production
 RUN npm run build
 
-# Remove devDependencies after build
-RUN npm prune --production
+# Production stage
+FROM node:18-bullseye-slim
+
+# Install runtime dependencies only
+RUN apt-get update && apt-get install -y \
+    libvips-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install only production dependencies
+ENV NODE_ENV=production
+RUN npm ci --only=production --legacy-peer-deps
+
+# Copy built application from builder
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/build ./build
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/.env* ./
+COPY --from=builder /app/config ./config
+COPY --from=builder /app/database ./database
+COPY --from=builder /app/src ./src
+
+# Create uploads directory
+RUN mkdir -p /app/public/uploads
 
 EXPOSE 1337
 
