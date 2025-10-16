@@ -1,28 +1,26 @@
-# Dockerfile para Backend Strapi
-FROM node:18-alpine
+# Dockerfile para Backend Strapi - Usando Debian para mejor compatibilidad
+FROM node:18-bullseye-slim
 
-# Install dependencies including Python for node-gyp
-RUN apk add --no-cache \
-    build-base \
+# Install dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
     gcc \
-    g++ \
     autoconf \
     automake \
-    zlib-dev \
+    libtool \
+    zlib1g-dev \
     libpng-dev \
-    vips-dev \
-    python3 \
-    make \
-    git
+    libvips-dev \
+    git \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
 # Copiar package files
 COPY package*.json ./
 
-# Install dependencies with rebuild for Alpine
-RUN npm ci --only=production && \
-    npm rebuild @swc/core
+# Install dependencies
+RUN npm ci --only=production
 
 # Copiar código fuente
 COPY . .
