@@ -24,6 +24,21 @@ COPY package*.json ./
 ENV NODE_ENV=development
 RUN npm install --legacy-peer-deps
 
+# Asegurar que @swc/core tenga binding nativo correcto en este entorno
+RUN npm rebuild @swc/core --verbose || true
+
+# Instalar binario nativo de @swc/core específico por arquitectura y validarlo
+RUN set -eux; \
+	ARCH="$(dpkg --print-architecture)"; \
+	if [ "$ARCH" = "amd64" ]; then \
+		npm install --no-save @swc/core-linux-x64-gnu || true; \
+	elif [ "$ARCH" = "arm64" ]; then \
+		npm install --no-save @swc/core-linux-arm64-gnu || true; \
+	else \
+		echo "Arquitectura no manejada para @swc/core: $ARCH, intentando continuar"; \
+	fi; \
+	node -e "require('@swc/core'); console.log('SWC binding OK')" || (echo 'SWC failed; continuará y se intentará durante build' && true)
+
 # Copiar el resto del código
 COPY . .
 
