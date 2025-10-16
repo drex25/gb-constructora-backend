@@ -154,3 +154,13 @@ CLIENT_URL=http://149.50.132.34:3000
 **Action required**: Upload new `Dockerfile.backend` to VPS and rebuild.
 
 **Estimated time**: 5-10 minutes total (upload + rebuild + startup)
+
+## 🧩 SWC Native Binding Fallback
+
+Para ambientes donde el binario nativo de `@swc/core` falla, se agregó:
+
+- `@swc/wasm` como devDependency para fallback confiable durante el build del admin.
+- Variables de entorno `SWC_WASM=1` en build y runtime.
+- Middleware `config/middlewares.js` que asegura los flags en arranque.
+
+Esto permite que Strapi construya el admin incluso si el binding nativo no carga correctamente dentro del contenedor.

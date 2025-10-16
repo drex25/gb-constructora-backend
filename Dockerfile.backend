@@ -22,11 +22,13 @@ RUN apt-get update \
 # Copiar manifests primero para aprovechar la cache
 COPY package*.json ./
 
-# Instalar TODAS las dependencias (incluye dev) de forma reproducible
+# Instalar TODAS las dependencias (incluye dev)
 ENV NODE_ENV=development
 # Fuerza la compilación desde fuente para cualquier módulo nativo
 ENV npm_config_build_from_source=true
-RUN npm ci --legacy-peer-deps
+# Forzar fallback a wasm si el binario nativo de swc no carga
+ENV SWC_WASM=1
+RUN npm install --legacy-peer-deps
 
 # Copiar el resto del proyecto
 COPY . .
@@ -57,6 +59,9 @@ RUN apt-get update \
 		 libstdc++6 \
 		 ca-certificates \
 	&& rm -rf /var/lib/apt/lists/*
+
+# Permitir fallback a wasm en runtime (seguro)
+ENV SWC_WASM=1
 
 # Copiamos node_modules ya compilados y el código construido
 COPY --from=builder /app/node_modules ./node_modules
