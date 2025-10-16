@@ -1,105 +1,46 @@
-############################
-# Dockerfile para Backend Strapi
-############################
+# ======================
+# Etapa 1: Build de Strapi
+# ======================
+FROM node:18-slim AS builder
 
-# 1) Etapa de build (Debian; evita problemas de musl/@swc)
-FROM node:20-bookworm-slim AS builder
-
-ENV DEBIAN_FRONTEND=noninteractive
 WORKDIR /app
 
-# Dependencias de compilación para módulos nativos (better-sqlite3/sharp, etc.)
-RUN apt-get update \
-	&& apt-get install -y --no-install-recommends \
-		build-essential \
-		python3 \
-		ca-certificates \
-		git \
-	&& rm -rf /var/lib/apt/lists/*
+# Instalar dependencias necesarias para build
+RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/*
 
-# Copiar manifiestos primero (mejor cache)
+# Copiar archivos de dependencias
 COPY package*.json ./
 
-# Instalar TODAS las dependencias (incluye dev para compilar el admin)
-ENV NODE_ENV=development
+# Instalar todas las dependencias (incluyendo devDependencies)
 RUN npm install --legacy-peer-deps
 
-# Asegurar que @swc/core tenga binding nativo correcto en este entorno
-RUN npm rebuild @swc/core --verbose || true
-
-# Instalar binario nativo de @swc/core específico por arquitectura y validarlo
-RUN set -eux; \
-	ARCH="$(dpkg --print-architecture)"; \
-	if [ "$ARCH" = "amd64" ]; then \
-		npm install --no-save @swc/core-linux-x64-gnu || true; \
-	elif [ "$ARCH" = "arm64" ]; then \
-		npm install --no-save @swc/core-linux-arm64-gnu || true; \
-	else \
-		echo "Arquitectura no manejada para @swc/core: $ARCH, intentando continuar"; \
-	fi; \
-	node -e "require('@swc/core'); console.log('SWC binding OK')" || (echo 'SWC failed; continuará y se intentará durante build' && true)
-
-# Instalar binario nativo de Rollup específico por arquitectura y validarlo
-RUN set -eux; \
-	ARCH="$(dpkg --print-architecture)"; \
-	if [ "$ARCH" = "amd64" ]; then \
-		npm install --no-save @rollup/rollup-linux-x64-gnu || true; \
-	elif [ "$ARCH" = "arm64" ]; then \
-		npm install --no-save @rollup/rollup-linux-arm64-gnu || true; \
-	else \
-		echo "Arquitectura no manejada para @rollup/rollup: $ARCH, intentando continuar"; \
-	fi; \
-	node -e "require('rollup'); console.log('Rollup native OK')" || (echo 'Rollup native failed; continuará y se intentará durante build' && true)
-
-# Copiar el resto del código
+# Copiar el resto del proyecto
 COPY . .
 
-# Si existe .env.production y no hay .env, úsalo durante el build
+# Copiar archivo .env si no existe (para builds automáticos)
 RUN if [ -f .env.production ] && [ ! -f .env ]; then cp .env.production .env; fi
 
-# Compilar (admin + server)
-ENV NODE_ENV=production
+# Compilar panel de administración
 RUN npm run build
 
-# Dejar node_modules sólo con dependencias de producción para runtime
-RUN npm prune --omit=dev
+# ======================
+# Etapa 2: Imagen de producción
+# ======================
+FROM node:18-slim
 
-
-# 2) Etapa de runtime (ligera)
-FROM node:20-bookworm-slim AS runtime
-
-ENV DEBIAN_FRONTEND=noninteractive
 WORKDIR /app
 
-# Certificados
-RUN apt-get update \
-	&& apt-get install -y --no-install-recommends ca-certificates \
-	&& rm -rf /var/lib/apt/lists/*
-
-# Variables
-ENV NODE_ENV=production
-
-# Copiar package.json y node_modules ya pruned desde el builder
+# Copiar solo los package.json para instalar deps de prod
 COPY package*.json ./
-COPY --from=builder /app/node_modules ./node_modules
 
-# Copiar artefactos y código necesario
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/build ./build
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/config ./config
-COPY --from=builder /app/database ./database
-COPY --from=builder /app/src ./src
+# Instalar solo dependencias necesarias para producción
+RUN npm install --production --legacy-peer-deps && npm cache clean --force
 
-# Copiar archivos de entorno si existen
-COPY --from=builder /app/.env* ./
+# Copiar el código construido desde la etapa anterior
+COPY --from=builder /app ./
 
-# Crear .env desde .env.production si no existe
-RUN if [ -f .env.production ] && [ ! -f .env ]; then cp .env.production .env; fi
-
-# Asegurar carpeta de uploads
-RUN mkdir -p /app/public/uploads
-
+# Exponer puerto de Strapi
 EXPOSE 1337
 
+# Comando por defecto
 CMD ["npm", "run", "start"]
