@@ -18,9 +18,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.backend
-      args:
-        NODE_ENV: production
     container_name: gb-strapi
+    env_file:
+      - .env.production
     environment:
       HOST: 0.0.0.0
       PORT: 1337

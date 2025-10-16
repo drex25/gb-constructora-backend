@@ -1,16 +1,5 @@
 # Dockerfile para Backend Strapi
-FROM node:18-bullseye-slim as builder
-
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    gcc \
-    g++ \
-    make \
-    python3 \
-    libvips-dev \
-    git \
-    && rm -rf /var/lib/apt/lists/*
+FROM node:18-alpine as builder
 
 WORKDIR /app
 
@@ -18,24 +7,21 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install ALL dependencies (including devDependencies for build)
-# Set NODE_ENV to development during install to ensure all deps are installed
 ENV NODE_ENV=development
-RUN npm ci --legacy-peer-deps
+RUN npm install --legacy-peer-deps
 
 # Copy source code
 COPY . .
+
+# Create .env from .env.production if it doesn't exist
+RUN if [ -f .env.production ] && [ ! -f .env ]; then cp .env.production .env; fi
 
 # Build admin panel with all dependencies available
 ENV NODE_ENV=production
 RUN npm run build
 
 # Production stage
-FROM node:18-bullseye-slim
-
-# Install runtime dependencies only
-RUN apt-get update && apt-get install -y \
-    libvips-dev \
-    && rm -rf /var/lib/apt/lists/*
+FROM node:18-alpine
 
 WORKDIR /app
 
@@ -44,16 +30,21 @@ COPY package*.json ./
 
 # Install only production dependencies
 ENV NODE_ENV=production
-RUN npm ci --only=production --legacy-peer-deps
+RUN npm install --production --legacy-peer-deps
 
 # Copy built application from builder
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/build ./build
 COPY --from=builder /app/public ./public
-COPY --from=builder /app/.env* ./
 COPY --from=builder /app/config ./config
 COPY --from=builder /app/database ./database
 COPY --from=builder /app/src ./src
+
+# Copy environment files
+COPY --from=builder /app/.env* ./ 
+
+# Create .env from .env.production if needed
+RUN if [ -f .env.production ] && [ ! -f .env ]; then cp .env.production .env; fi
 
 # Create uploads directory
 RUN mkdir -p /app/public/uploads
