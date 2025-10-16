@@ -1,33 +1,34 @@
-# Dockerfile para Backend Strapi - Usando Debian para mejor compatibilidad
+# Dockerfile para Backend Strapi
 FROM node:18-bullseye-slim
 
-# Install dependencies
+# Install system dependencies
 RUN apt-get update && apt-get install -y \
     build-essential \
     gcc \
-    autoconf \
-    automake \
-    libtool \
-    zlib1g-dev \
-    libpng-dev \
+    g++ \
+    make \
+    python3 \
     libvips-dev \
     git \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Copiar package files
+# Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci --only=production
+# Install ALL dependencies (including devDependencies for build)
+RUN npm ci
 
-# Copiar código fuente
+# Copy source code
 COPY . .
 
-# Build Strapi admin panel
+# Build admin panel with all dependencies available
 ENV NODE_ENV=production
 RUN npm run build
+
+# Remove devDependencies after build
+RUN npm prune --production
 
 EXPOSE 1337
 

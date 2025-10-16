@@ -22,5 +22,7 @@ jobs:
           script: |
             cd ~/gb-constructora-backend
             git pull origin main
-            docker-compose up -d --build
-            docker system prune -af
+            docker-compose down
+            docker-compose up -d --build --force-recreate
+            docker image prune -af
+            docker builder prune -af --filter "until=24h"
