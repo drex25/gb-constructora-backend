@@ -39,6 +39,18 @@ RUN set -eux; \
 	fi; \
 	node -e "require('@swc/core'); console.log('SWC binding OK')" || (echo 'SWC failed; continuará y se intentará durante build' && true)
 
+# Instalar binario nativo de Rollup específico por arquitectura y validarlo
+RUN set -eux; \
+	ARCH="$(dpkg --print-architecture)"; \
+	if [ "$ARCH" = "amd64" ]; then \
+		npm install --no-save @rollup/rollup-linux-x64-gnu || true; \
+	elif [ "$ARCH" = "arm64" ]; then \
+		npm install --no-save @rollup/rollup-linux-arm64-gnu || true; \
+	else \
+		echo "Arquitectura no manejada para @rollup/rollup: $ARCH, intentando continuar"; \
+	fi; \
+	node -e "require('rollup'); console.log('Rollup native OK')" || (echo 'Rollup native failed; continuará y se intentará durante build' && true)
+
 # Copiar el resto del código
 COPY . .
 
