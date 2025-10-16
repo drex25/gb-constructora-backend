@@ -1,0 +1,33 @@
+{
+  "kind": "collectionType",
+  "collectionName": "servicios",
+  "info": {
+    "singularName": "servicio",
+    "pluralName": "servicios",
+    "displayName": "Servicio"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "title": {
+      "type": "string",
+      "required": true
+    },
+    "description": {
+      "type": "string",
+      "required": true
+    },
+    "icon": {
+      "type": "string",
+      "default": "Building2"
+    },
+    "features": {
+      "type": "json"
+    },
+    "order": {
+      "type": "integer"
+    }
+  }
+}
