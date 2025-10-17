@@ -1,5 +1,7 @@
 module.exports = [
+  'strapi::logger',
   'strapi::errors',
+  'strapi::security',
   {
     name: 'global::swc-fallback',
     configure: () => {
@@ -12,23 +14,15 @@ module.exports = [
       }
     },
   },
-  'strapi::security',
-  'strapi::cors',
-  'strapi::poweredBy',
-  'strapi::logger',
-  'strapi::query',
-  'strapi::body',
-  'strapi::session',
-  'strapi::favicon',
-  'strapi::public',
-];module.exports = [
-  'strapi::logger',
-  'strapi::errors',
-  'strapi::security',
   {
     name: 'strapi::cors',
     config: {
-      origin: process.env.CLIENT_URL ? [process.env.CLIENT_URL, 'http://localhost:5173', 'http://localhost:8080'] : ['*'],
+      origin: [
+        'http://149.50.132.34:3000',  // Frontend en servidor 149
+        'http://localhost:5173',       // Desarrollo local
+        'http://localhost:8080',       // Desarrollo local alternativo
+        'http://localhost:3000'        // Desarrollo local frontend
+      ],
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'],
       headers: ['Content-Type', 'Authorization', 'Origin', 'Accept'],
       keepHeaderOnError: true,

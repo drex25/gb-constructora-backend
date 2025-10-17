@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e -o pipefail
 
-echo "🚀 Strapi PM2 deploy (sin Docker) - amd64"
+echo "🚀 Strapi PM2 deploy - amd64"
 
 cd "$(dirname "$0")" || cd .
 
@@ -81,9 +81,19 @@ npm rebuild better-sqlite3 --verbose || true
 echo "🏗️ Compilando Strapi..."
 npx strapi build --debug
 
-# 8) Arrancar con PM2
-echo "🟢 Arrancando con PM2 en puerto 1337..."
+# 8) Gestionar PM2 correctamente
+echo "🟢 Gestionando PM2..."
 npm i -g pm2 >/dev/null 2>&1 || sudo npm i -g pm2
+
+# Detener proceso existente si existe
+if pm2 list | grep -q "strapi"; then
+    echo "🛑 Deteniendo proceso Strapi existente..."
+    pm2 stop strapi
+    pm2 delete strapi
+fi
+
+# Arrancar con PM2
+echo "🚀 Iniciando Strapi con PM2 en puerto 1337..."
 pm2 start "npm run start" --name strapi --time
 pm2 save
 pm2 startup || true
