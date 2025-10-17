@@ -1,4 +1,4 @@
-name: Deploy Backend
+name: Deploy Backend (PM2 - sin Docker)
 
 on:
   push:
@@ -13,7 +13,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Deploy to VPS Backend
+      - name: Deploy to VPS Backend (PM2)
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.VPS_BACKEND_HOST }}
@@ -22,7 +22,5 @@ jobs:
           script: |
             cd ~/gb-constructora-backend
             git pull origin main
-            docker-compose down
-            docker-compose up -d --build --force-recreate
-            docker image prune -af
-            docker builder prune -af --filter "until=24h"
+            chmod +x deploy_pm2.sh
+            ./deploy_pm2.sh

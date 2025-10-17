@@ -64,7 +64,13 @@ export npm_config_build_from_source=true
 echo "📦 Instalando dependencias..."
 npm cache clean --force >/dev/null 2>&1 || true
 rm -rf node_modules .cache dist build .tmp 2>/dev/null || true
+# Workaround npm optional deps bug (rollup native): remove lockfile so platform binaries are resolved
+rm -f package-lock.json 2>/dev/null || true
+export npm_config_optional=true
 npm install --legacy-peer-deps
+
+# Asegurar binario nativo de Rollup para linux x64 (opcional, no rompe si ya está)
+npm install -D @rollup/rollup-linux-x64-gnu@^4 || true
 
 # 6) Rebuild de binarios nativos
 echo "🛠️  Rebuilding nativos (swc/sqlite)..."
